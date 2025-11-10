@@ -16,8 +16,8 @@ const connectAndStart = async () => {
     await redis.ping();
     console.log("✅ Redis connected successfully");
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error("❌ Failed to connect to a required service:", error);
