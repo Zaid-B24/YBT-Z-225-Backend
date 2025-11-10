@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum CollectionType {
+  YBT
+  DESIGNER
+  WORKSHOP
+  TORQUE_TUNER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  SOLD
+  PENDING
+  RESERVED
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+  CNG
+}
+
+enum DriveType {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum Stage {
+  STAGE1
+  STAGE2
+  STAGE3
+}
+
+enum OwnershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum EventType {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  email              String              @unique
+  password           String
+  phoneNumber        String?
+  DOB                DateTime?
+  gender             Gender?
+  address            String?
+  city               String?
+  state              String?
+  zipCode            String?
+  country            String?
+  role               Role                @default(USER)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  ownedCars          CarOwnership[]
+  ownedBikes         BikeOwnership[]
+  createdEvents      Event[]             @relation("EventsCreatedByAdmin")
+  eventRegistrations EventRegistration[]
+  orders             Order[]
+  applications       EventApplication[]  @relation("UserApplications")
+  reviewedApps       EventApplication[]  @relation("AdminReviews")
+}
+
+model Dealer {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  email     String?  @unique
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cars      Car[]
+  bikes     Bike[]
+}
+
+model Designer {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String? @unique
+  title       String
+  description String
+  image       String
+  stats       Json
+  cars        Car[]
+}
+
+model Workshop {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String? @unique
+  title       String
+  description String
+  image       String
+  stats       Json
+  cars        Car[]
+}
+
+model Car {
+  id                 Int            @id @default(autoincrement())
+  title              String
+  description        String?
+  status             VehicleStatus? @default(AVAILABLE)
+  sellingPrice       Float
+  cutOffPrice        Float
+  ybtPrice           Float
+  registrationYear   Int
+  registrationNumber String         @unique
+  manufactureYear    Int?
+  kmsDriven          Int
+  ownerCount         Int?
+  insurance          String?
+  collectionType     CollectionType
+  tuningStage        Stage?
+  designerId         Int?
+  designer           Designer?      @relation(fields: [designerId], references: [id], onDelete: SetNull)
+  workshopId         Int?
+  workshop           Workshop?      @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  dealerId           Int
+  dealer             Dealer         @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  badges             String[]
+  specs              String[]
+  features           String[]
+  vipNumber          Boolean        @default(false)
+  city               String?
+  state              String?
+  brand              String?
+  carUSP             String?
+  carType            String?
+  transmission       String?
+  exteriorColour     String?
+  peakTorque         String?
+  peakPower          String?
+  doors              Int?
+  driveType          DriveType?
+  seatingCapacity    Int?
+  engine             String?
+  fuelType           FuelType       @default(PETROL)
+  mileage            Float?
+  thumbnail          String?
+  carImages          String[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  ownerships         CarOwnership[]
+  leads              BookingLead[]
+
+  @@index([designerId])
+  @@index([workshopId])
+  @@index([title])
+  @@index([brand])
+  @@index([createdAt, id])
+  @@index([status])
+  @@index([dealerId, createdAt])
+}
+
+model Bike {
+  id                 Int             @id @default(autoincrement())
+  title              String
+  registrationYear   Int
+  kmsDriven          Int
+  ownerCount         Int?
+  badges             String[]
+  description        String?
+  registrationNumber String          @unique
+  vipNumber          Boolean         @default(false)
+  sellingPrice       Float?
+  cutOffPrice        Float?
+  ybtPrice           Float
+  brand              String?
+  insurance          String?
+  specs              String[]
+  engine             String?
+  collectionType     CollectionType  @default(YBT)
+  bikeUSP            String?
+  fuelType           FuelType        @default(PETROL)
+  bikeImages         String[]
+  thumbnail          String?
+  status             VehicleStatus   @default(AVAILABLE)
+  dealerId           Int
+  dealer             Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  ownerships         BikeOwnership[]
+
+  @@index([title])
+  @@index([brand])
+  @@index([status])
+  @@index([dealerId])
+  @@index([createdAt, id])
+}
+
+model CarOwnership {
+  id          Int             @id @default(autoincrement())
+  userId      Int
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carId       Int
+  car         Car             @relation(fields: [carId], references: [id], onDelete: Cascade)
+  status      OwnershipStatus @default(PENDING)
+  notes       String?
+  requestedAt DateTime        @default(now())
+  approvedAt  DateTime?
+  completedAt DateTime?
+
+  @@unique([userId, carId])
+  @@index([userId])
+  @@index([carId])
+  @@index([status])
+}
+
+model BikeOwnership {
+  id          Int             @id @default(autoincrement())
+  userId      Int
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bikeId      Int
+  bike        Bike            @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  status      OwnershipStatus @default(PENDING)
+  notes       String?
+  requestedAt DateTime        @default(now())
+  approvedAt  DateTime?
+  completedAt DateTime?
+
+  @@unique([userId, bikeId])
+  @@index([userId])
+  @@index([bikeId])
+  @@index([status])
+}
+
+model BookingLead {
+  id        Int      @id @default(autoincrement())
+  carId     Int
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String
+  address   String?
+  status    String   @default("NEW")
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([carId])
+  @@index([email])
+}
+
+model Event {
+  id            Int                 @id @default(autoincrement())
+  title         String
+  slug          String              @unique
+  description   String?
+  type          EventType           @default(PUBLIC)
+  status        EventStatus         @default(DRAFT)
+  isFeatured    Boolean?            @default(false)
+  debug_flag    String?             @default("not_updated")
+  maxAttendees  Int? //default it to no. of tickets
+  location      String?
+  startDate     DateTime
+  endDate       DateTime
+  imageUrls     String[]
+  primaryImage  String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  creatorId     Int
+  creator       User                @relation("EventsCreatedByAdmin", fields: [creatorId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+  facilities    String[]
+  youshouldKnow String[]
+
+  //Relations
+
+  categories   EventCategory[]
+  ticketTypes  TicketType[]
+  applications EventApplication[]
+
+  @@unique([startDate, id])
+  @@index([startDate(sort: Desc), id(sort: Desc)])
+  @@index([status, startDate(sort: Desc), id(sort: Desc)])
+  @@index([title, id])
+  @@map("events")
+}
+
+model EventCategory {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  slug   String  @unique
+  events Event[]
+}
+
+model TicketType {
+  id            Int                 @id @default(autoincrement())
+  name          String
+  price         Float
+  quantity      Int
+  eventId       Int
+  saleStartDate DateTime?
+  saleEndDate   DateTime?
+  registrations EventRegistration[]
+  quantitySold  Int                 @default(0)
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id                Int                 @id @default(autoincrement())
+  status            OrderStatus         @default(PENDING)
+  totalAmount       Float
+  paymentGatewayId  String?
+  razorpayOrderId   String?             @unique
+  razorpayPaymentId String?
+  userId            Int
+  user              User                @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  registrations     EventRegistration[]
+  createdAt         DateTime            @default(now())
+}
+
+model OrderItem {
+  id              Int        @id @default(autoincrement())
+  quantity        Int
+  priceAtPurchase Float
+  orderId         Int
+  order           Order      @relation(fields: [orderId], references: [id])
+  ticketTypeId    Int
+  ticketType      TicketType @relation(fields: [ticketTypeId], references: [id])
+
+  @@index([ticketTypeId])
+}
+
+model EventRegistration {
+  id               Int        @id @default(autoincrement())
+  registrationCode String     @unique @default(cuid()) // ADDED
+  checkedIn        Boolean    @default(false) // ADDED
+  userId           Int
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId          Int
+  event            Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderId          Int // ADDED
+  order            Order      @relation(fields: [orderId], references: [id]) // ADDED
+  registeredAt     DateTime   @default(now())
+  ticketTypeId     Int
+  ticketType       TicketType @relation(fields: [ticketTypeId], references: [id])
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([ticketTypeId])
+}
+
+model EventApplication {
+  id              Int               @id @default(autoincrement())
+  status          ApplicationStatus @default(PENDING)
+  message         String?
+  userId          Int
+  user            User              @relation("UserApplications", fields: [userId], references: [id], onDelete: Cascade)
+  eventId         Int
+  event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reviewedAt      DateTime?
+  reviewedById    Int?
+  reviewer        User?             @relation("AdminReviews", fields: [reviewedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rejectionReason String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([userId, eventId])
+}
