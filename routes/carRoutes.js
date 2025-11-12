@@ -20,6 +20,7 @@ router.post(
   carController.createCar
 );
 
+router.get("/latest-additions", carController.getLatestAdditions);
 router.get("/", carController.getAllCars);
 router.get("/count", carController.getTotalCars);
 router.get("/:id", validate(getCarByIdSchema), carController.getCarById);

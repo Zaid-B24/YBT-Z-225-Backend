@@ -19,6 +19,8 @@ const CategoryRoute = require("./Events/CategoryRoute");
 const dealerRoute = require("./dealerRoute");
 const designerRoute = require("./designerRoute");
 const workshopRoute = require("./workShopRoute");
+const homePage = require("./HomePage");
+const adminHomepage = require("./adminHomePage");
 
 router.use("/users", userRoutes);
 router.use("/auth", authRoutes);
@@ -32,5 +34,7 @@ router.use("/eventcategory", CategoryRoute);
 router.use("/dealer", dealerRoute);
 router.use("/designer", designerRoute);
 router.use("/workshop", workshopRoute);
+router.use("/homepage", homePage);
+router.use("/homeslide", adminHomepage);
 
 module.exports = router;

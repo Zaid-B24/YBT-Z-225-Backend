@@ -85,6 +85,35 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+model HeroSlide {
+  id        Int      @id @default(autoincrement())
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Content Links
+  carId   Int?
+  car     Car?   @relation(fields: [carId], references: [id], onDelete: SetNull)
+  eventId Int?
+  event   Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  // Overrides
+  customTitle     String?
+  customSubtitle  String?
+  customLinkUrl   String?
+  customAssetUrl  String?
+  customAssetType AssetType? @default(IMAGE)
+
+  @@index([carId])
+  @@index([eventId])
+  @@index([isActive, order])
+}
+
 model User {
   id                 Int                 @id @default(autoincrement())
   name               String
@@ -101,13 +130,13 @@ model User {
   role               Role                @default(USER)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  ownedCars          CarOwnership[]
   ownedBikes         BikeOwnership[]
-  createdEvents      Event[]             @relation("EventsCreatedByAdmin")
+  ownedCars          CarOwnership[]
+  reviewedApps       EventApplication[]  @relation("AdminReviews")
+  applications       EventApplication[]  @relation("UserApplications")
   eventRegistrations EventRegistration[]
   orders             Order[]
-  applications       EventApplication[]  @relation("UserApplications")
-  reviewedApps       EventApplication[]  @relation("AdminReviews")
+  createdEvents      Event[]             @relation("EventsCreatedByAdmin")
 }
 
 model Dealer {
@@ -121,8 +150,8 @@ model Dealer {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  cars      Car[]
   bikes     Bike[]
+  cars      Car[]
 }
 
 model Designer {
@@ -164,11 +193,8 @@ model Car {
   collectionType     CollectionType
   tuningStage        Stage?
   designerId         Int?
-  designer           Designer?      @relation(fields: [designerId], references: [id], onDelete: SetNull)
   workshopId         Int?
-  workshop           Workshop?      @relation(fields: [workshopId], references: [id], onDelete: SetNull)
   dealerId           Int
-  dealer             Dealer         @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   badges             String[]
   specs              String[]
   features           String[]
@@ -192,8 +218,12 @@ model Car {
   carImages          String[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
-  ownerships         CarOwnership[]
+  heroSlides         HeroSlide[]
   leads              BookingLead[]
+  dealer             Dealer         @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  designer           Designer?      @relation(fields: [designerId], references: [id])
+  workshop           Workshop?      @relation(fields: [workshopId], references: [id])
+  ownerships         CarOwnership[]
 
   @@index([designerId])
   @@index([workshopId])
@@ -228,9 +258,9 @@ model Bike {
   thumbnail          String?
   status             VehicleStatus   @default(AVAILABLE)
   dealerId           Int
-  dealer             Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+  dealer             Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   ownerships         BikeOwnership[]
 
   @@index([title])
@@ -243,14 +273,14 @@ model Bike {
 model CarOwnership {
   id          Int             @id @default(autoincrement())
   userId      Int
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   carId       Int
-  car         Car             @relation(fields: [carId], references: [id], onDelete: Cascade)
   status      OwnershipStatus @default(PENDING)
   notes       String?
   requestedAt DateTime        @default(now())
   approvedAt  DateTime?
   completedAt DateTime?
+  car         Car             @relation(fields: [carId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, carId])
   @@index([userId])
@@ -261,14 +291,14 @@ model CarOwnership {
 model BikeOwnership {
   id          Int             @id @default(autoincrement())
   userId      Int
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   bikeId      Int
-  bike        Bike            @relation(fields: [bikeId], references: [id], onDelete: Cascade)
   status      OwnershipStatus @default(PENDING)
   notes       String?
   requestedAt DateTime        @default(now())
   approvedAt  DateTime?
   completedAt DateTime?
+  bike        Bike            @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, bikeId])
   @@index([userId])
@@ -279,7 +309,6 @@ model BikeOwnership {
 model BookingLead {
   id        Int      @id @default(autoincrement())
   carId     Int
-  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
   name      String
   email     String
   phone     String
@@ -287,6 +316,7 @@ model BookingLead {
   status    String   @default("NEW")
   notes     String?
   createdAt DateTime @default(now())
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
 
   @@index([carId])
   @@index([email])
@@ -307,9 +337,11 @@ model Event {
   endDate       DateTime
   imageUrls     String[]
   primaryImage  String?
+  videoUrls     String[]
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   creatorId     Int
+  heroSlides    HeroSlide[]
   creator       User                @relation("EventsCreatedByAdmin", fields: [creatorId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
   facilities    String[]
@@ -343,10 +375,10 @@ model TicketType {
   eventId       Int
   saleStartDate DateTime?
   saleEndDate   DateTime?
-  registrations EventRegistration[]
   quantitySold  Int                 @default(0)
-  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
   orderItems    OrderItem[]
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Order {
@@ -357,10 +389,10 @@ model Order {
   razorpayOrderId   String?             @unique
   razorpayPaymentId String?
   userId            Int
+  createdAt         DateTime            @default(now())
+  registrations     EventRegistration[]
   user              User                @relation(fields: [userId], references: [id])
   items             OrderItem[]
-  registrations     EventRegistration[]
-  createdAt         DateTime            @default(now())
 }
 
 model OrderItem {
@@ -368,8 +400,8 @@ model OrderItem {
   quantity        Int
   priceAtPurchase Float
   orderId         Int
-  order           Order      @relation(fields: [orderId], references: [id])
   ticketTypeId    Int
+  order           Order      @relation(fields: [orderId], references: [id])
   ticketType      TicketType @relation(fields: [ticketTypeId], references: [id])
 
   @@index([ticketTypeId])
@@ -377,17 +409,17 @@ model OrderItem {
 
 model EventRegistration {
   id               Int        @id @default(autoincrement())
-  registrationCode String     @unique @default(cuid()) // ADDED
-  checkedIn        Boolean    @default(false) // ADDED
+  registrationCode String     @unique @default(cuid())
+  checkedIn        Boolean    @default(false)
   userId           Int
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventId          Int
-  event            Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  orderId          Int // ADDED
-  order            Order      @relation(fields: [orderId], references: [id]) // ADDED
+  orderId          Int
   registeredAt     DateTime   @default(now())
   ticketTypeId     Int
+  event            Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  order            Order      @relation(fields: [orderId], references: [id])
   ticketType       TicketType @relation(fields: [ticketTypeId], references: [id])
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
   @@index([userId])
@@ -399,15 +431,15 @@ model EventApplication {
   status          ApplicationStatus @default(PENDING)
   message         String?
   userId          Int
-  user            User              @relation("UserApplications", fields: [userId], references: [id], onDelete: Cascade)
   eventId         Int
-  event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   reviewedAt      DateTime?
   reviewedById    Int?
-  reviewer        User?             @relation("AdminReviews", fields: [reviewedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rejectionReason String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reviewer        User?             @relation("AdminReviews", fields: [reviewedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User              @relation("UserApplications", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
 }

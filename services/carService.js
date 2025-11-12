@@ -39,6 +39,26 @@ exports.createCar = async (carData) => {
   return newCar;
 };
 
+exports.fetchLatestAdditions = async () => {
+  return prisma.car.findMany({
+    where: {
+      status: "AVAILABLE",
+    },
+    take: 3,
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      //slug: true,
+      title: true,
+      thumbnail: true,
+      badges: true,
+      brand: true,
+    },
+  });
+};
+
 exports.getTotalCars = async () => {
   return prisma.car.count();
 };

@@ -35,6 +35,24 @@ exports.createCar = async (req, res) => {
   }
 };
 
+exports.getLatestAdditions = async (req, res) => {
+  try {
+    const cars = await carService.fetchLatestAdditions();
+
+    // 2. Send the data
+    res.status(200).json({
+      success: true,
+      message: "Latest additions fetched successfully",
+      data: cars,
+    });
+  } catch (error) {
+    console.error("Error in getLatestAdditions controller:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch latest additions." });
+  }
+};
+
 //Add the zod validation for bike, once prisma schema is fixed, and move validation to middleware
 exports.getAllCars = async (req, res) => {
   try {

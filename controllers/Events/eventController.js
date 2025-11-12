@@ -14,6 +14,13 @@ exports.createEvent = async (req, res) => {
 
     const { title, categoryIds, ticketTypes, ...restOfBody } = validatedData;
 
+    const imageFiles = req.files?.images || [];
+    const videoFiles = req.files?.videos || []; // <-- NEW
+
+    // Map files to their Cloudinary URLs (file.path)
+    const imageUrls = imageFiles.map((file) => file.path);
+    const videoUrls = videoFiles.map((file) => file.path);
+
     const eventData = {
       ...restOfBody,
       title: title,
@@ -22,6 +29,9 @@ exports.createEvent = async (req, res) => {
       categories: {
         connect: categoryIds.map((id) => ({ id })),
       },
+      imageUrls: imageUrls, // <-- Populated from file uploads
+      videoUrls: videoUrls, // <-- NEW: Populated from file uploads
+      primaryImage: imageUrls[0] || null,
     };
 
     if (validatedData.ticketTypes && validatedData.ticketTypes.length > 0) {
@@ -32,17 +42,17 @@ exports.createEvent = async (req, res) => {
       delete eventData.ticketTypes;
     }
 
-    //Move this logic and all image uplaod to a separate function
-    // --- 3. Handle File Uploads and Images ---
-    const imageUrls = [];
-    if (req.files?.images) {
-      const images = Array.isArray(req.files.images)
-        ? req.files.images
-        : [req.files.images];
-      imageUrls.push(...images.map((file) => file.path));
-    }
-    eventData.imageUrls = imageUrls;
-    eventData.primaryImage = imageUrls[0] || null;
+    // //Move this logic and all image uplaod to a separate function
+    // // --- 3. Handle File Uploads and Images ---
+    // const imageUrls = [];
+    // if (req.files?.images) {
+    //   const images = Array.isArray(req.files.images)
+    //     ? req.files.images
+    //     : [req.files.images];
+    //   imageUrls.push(...images.map((file) => file.path));
+    // }
+    // eventData.imageUrls = imageUrls;
+    // eventData.primaryImage = imageUrls[0] || null;
 
     const newEvent = await EventService.createEvent(eventData);
     res.status(201).json({
