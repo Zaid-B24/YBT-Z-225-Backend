@@ -7,6 +7,7 @@ exports.fetchHeroSlides = async () => {
     include: {
       car: {
         select: {
+          id: true,
           title: true,
           description: true,
           thumbnail: true,

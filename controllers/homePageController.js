@@ -34,8 +34,8 @@ exports.getHeroSlides = async (req, res) => {
 
       const linkUrl =
         slide.customLinkUrl ??
-        (slide.car && slide.car.slug
-          ? `/cars/${slide.car.slug}`
+        (slide.car && slide.car.id
+          ? `/cars/${slide.car.id}`
           : slide.event && slide.event.slug
           ? `/events/${slide.event.slug}`
           : "/");

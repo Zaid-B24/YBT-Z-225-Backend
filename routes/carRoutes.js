@@ -35,8 +35,6 @@ router.put(
   validate(updateCarSchema),
   carController.updateCar
 );
-// router.post("/:carId/book", protect, carController.bookCar);
-// router.post("/:carId/guest-book", carController.createGuestBooking);
 router.delete("/:id", carController.deleteCar);
 
 module.exports = router;

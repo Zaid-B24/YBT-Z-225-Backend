@@ -126,7 +126,7 @@ exports.deleteCar = async (id) => {
 exports.getAllCars = async (options = {}) => {
   const {
     cursor,
-    searchTerm,
+    //searchTerm,
     brands,
     sortBy = "newest",
     collectionType,
@@ -138,12 +138,12 @@ exports.getAllCars = async (options = {}) => {
   if (collectionType)
     where.collectionType = { equals: collectionType.toUpperCase() };
   if (designerId) where.designerId = designerId;
-  if (searchTerm) {
-    where.OR = [
-      { title: { contains: searchTerm, mode: "insensitive" } },
-      { description: { contains: searchTerm, mode: "insensitive" } },
-    ];
-  }
+  // if (searchTerm) {
+  //   where.OR = [
+  //     { title: { contains: searchTerm, mode: "insensitive" } },
+  //     { description: { contains: searchTerm, mode: "insensitive" } },
+  //   ];
+  // }
   if (brands) {
     const brandList = brands
       .split(",")
