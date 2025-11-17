@@ -14,7 +14,10 @@ router.post(
   "/",
   protect,
   admin,
-  upload.fields([{ name: "bikeImages", maxCount: 10 }]),
+  upload.fields([
+    { name: "images", maxCount: 10 },
+    { name: "videos", maxCount: 5 },
+  ]),
   validate(createBikeSchema),
   bikeController.createBike
 );

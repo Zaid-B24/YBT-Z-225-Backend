@@ -8,11 +8,13 @@ const getImageUrls = (files) => {
 };
 
 exports.createBike = async (bikeData) => {
-  const { dealerId, imageUrls, primaryImage, ...restOfBikeData } = bikeData;
+  const { dealerId, imageUrls, videoUrls, primaryImage, ...restOfBikeData } =
+    bikeData;
 
   const dataForDatabase = {
     ...restOfBikeData,
     bikeImages: imageUrls,
+    videoUrls: videoUrls,
     thumbnail: primaryImage,
     dealer: {
       connect: { id: dealerId },

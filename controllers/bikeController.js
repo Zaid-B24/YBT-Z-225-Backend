@@ -4,18 +4,19 @@ const { processUploadedImages } = require("../utils/fileHelper");
 exports.createBike = async (req, res) => {
   try {
     const validatedData = req.body;
-    const { imageUrls, primaryImage } = processUploadedImages(
-      req.files,
-      "bikeImages"
-    );
+    const imageFiles = req.files?.images || [];
+    const videoFiles = req.files?.videos || [];
+    const imageUrls = imageFiles.map((file) => file.path);
+    const videoUrls = videoFiles.map((file) => file.path);
 
-    const dataForService = {
+    const bikeData = {
       ...validatedData,
       imageUrls: imageUrls,
-      primaryImage: primaryImage,
+      videoUrls: videoUrls,
+      primaryImage: imageUrls[0] || null,
     };
 
-    const newBike = await bikeService.createBike(dataForService);
+    const newBike = await bikeService.createBike(bikeData);
     res.status(201).json({ success: true, data: newBike });
   } catch (error) {
     console.error("Error in creating bike:", error);
