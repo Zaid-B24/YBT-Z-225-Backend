@@ -13,6 +13,7 @@ exports.createCar = async (carData) => {
     designerId,
     workshopId,
     imageUrls,
+    videoUrls,
     primaryImage,
     ...restOfCarData
   } = carData;
@@ -20,6 +21,7 @@ exports.createCar = async (carData) => {
   const dataForDatabase = {
     ...restOfCarData,
     carImages: imageUrls,
+    videoUrls: videoUrls,
     thumbnail: primaryImage,
     dealer: {
       connect: { id: dealerId },

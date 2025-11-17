@@ -96,10 +96,22 @@ const createCarSchema = z.object({
 
   // --- File validation ---
   files: z
-    .any()
+    .object({
+      images: z.array(z.any()).optional(),
+      videos: z.array(z.any()).optional(),
+    })
     .refine(
-      (files) => files?.carImages?.length > 0,
-      "At least one car image is required."
+      (files) =>
+        (files.images?.length || 0) > 0 || (files.videos?.length || 0) > 0,
+      "At least one image or video is required."
+    )
+    .refine(
+      (files) => (files.images?.length || 0) <= 10,
+      "You can upload a maximum of 10 images."
+    )
+    .refine(
+      (files) => (files.videos?.length || 0) <= 5,
+      "You can upload a maximum of 5 videos."
     ),
 });
 

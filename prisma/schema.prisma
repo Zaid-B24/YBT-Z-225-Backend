@@ -216,6 +216,7 @@ model Car {
   mileage            Float?
   thumbnail          String?
   carImages          String[]
+  videoUrls          String[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   heroSlides         HeroSlide[]
@@ -255,6 +256,7 @@ model Bike {
   bikeUSP            String?
   fuelType           FuelType        @default(PETROL)
   bikeImages         String[]
+  videoUrls          String[]
   thumbnail          String?
   status             VehicleStatus   @default(AVAILABLE)
   dealerId           Int
