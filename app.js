@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const session = require("express-session");
+const { RedisStore } = require("connect-redis");
+const redis = require("./utils/redis");
 const apiRouter = require("./routes/Index");
 
 const app = express();
@@ -12,8 +15,35 @@ app.use(
     },
   })
 );
-app.use(cors());
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:4000",
+    credentials: true,
+  })
+);
 app.use(helmet());
+
+const store = new RedisStore({
+  client: redis,
+  prefix: "ybt_session:",
+});
+
+app.use(
+  session({
+    store,
+    name: "sid",
+    secret: process.env.JWT_SECRET || "default_secret_change_this",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
+  })
+);
 
 // app.use((req, res, next) => {
 //   const start = Date.now();

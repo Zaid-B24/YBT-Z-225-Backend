@@ -1,34 +1,27 @@
-const jwt = require("jsonwebtoken");
+const sessionService = require("../services/sessionService");
 const prisma = require("../utils/prisma");
 
 const protect = async (req, res, next) => {
-  let token;
-  // Add guarded authentication of token and bearer
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    const user = sessionService.getSessionUser(req);
 
-      req.user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { id: true, name: true, email: true, role: true },
-      });
-
-      if (!req.user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-      next();
-    } catch (error) {
-      console.error(error);
-      return res.status(401).json({ message: "Not authorized, token failed" });
+    if (!user) {
+      return res.status(401).json({ message: "Not authorized, no session" });
     }
-  }
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+    req.user = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    if (!req.user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    next();
+  } catch (error) {
+    console.error(error);
+    return res.status(401).json({ message: "Not authorized, session failed" });
   }
 };
 
@@ -41,26 +34,24 @@ const admin = (req, res, next) => {
 };
 
 const identifyUser = async (req, res, next) => {
-  let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    const user = sessionService.getSessionUser(req);
 
+    if (user) {
       req.user = await prisma.user.findUnique({
-        where: { id: decoded.id },
+        where: { id: user.id },
         select: { id: true, name: true, email: true, role: true },
       });
-    } catch (error) {
-      console.error("Optional auth error: Invalid token", error.message);
+    } else {
       req.user = null;
     }
-  }
 
-  next();
+    next();
+  } catch (error) {
+    console.error("Optional auth error:", error.message);
+    req.user = null;
+    next();
+  }
 };
 
 module.exports = { protect, admin, identifyUser };

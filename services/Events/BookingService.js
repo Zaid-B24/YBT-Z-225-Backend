@@ -3,6 +3,20 @@ const razorpay = require("../../config/razorpay");
 const crypto = require("crypto");
 const redisService = require("../redisService");
 
+const _verifyWebhookSignature = (webhookBody, signature) => {
+  const bodyData = Buffer.isBuffer(webhookBody)
+    ? webhookBody
+    : JSON.stringify(webhookBody);
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
+    .update(bodyData)
+    .digest("hex");
+
+  if (expectedSignature !== signature) {
+    throw new Error("InvalidWebhookSignature");
+  }
+};
+
 const _finalizeBooking = async (tx, razorpayOrderId, razorpayPaymentId) => {
   const order = await tx.order.findFirst({
     where: { razorpayOrderId: razorpayOrderId },
@@ -170,18 +184,13 @@ exports.initiateBooking = async (userId, eventId, items) => {
   }
 };
 
-exports.confirmBooking = async (webhookBody, signature) => {
-  const bodyData = Buffer.isBuffer(webhookBody)
-    ? webhookBody
-    : JSON.stringify(webhookBody);
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
-    .update(bodyData)
-    .digest("hex");
+exports.confirmBooking = async (webhookBody, signature, eventType) => {
+  _verifyWebhookSignature(webhookBody, signature);
 
-  if (expectedSignature !== signature) {
-    throw new Error("InvalidWebhookSignature");
+  if (eventType !== "payment.captured") {
+    return null;
   }
+
   const parsedBody = Buffer.isBuffer(webhookBody)
     ? JSON.parse(webhookBody.toString())
     : webhookBody;
@@ -306,4 +315,65 @@ exports.getBookings = async (userId) => {
     pagination: { hasMore: false, nextCursor: null },
     filters: null,
   };
+};
+
+exports.processRefundWebhook = async (webhookBody, signature, eventType) => {
+  _verifyWebhookSignature(webhookBody, signature);
+
+  if (eventType !== "refund.processed") {
+    return null;
+  }
+
+  const parsedBody = Buffer.isBuffer(webhookBody)
+    ? JSON.parse(webhookBody.toString())
+    : webhookBody;
+
+  const refundEntity = parsedBody.payload?.refund?.entity;
+  if (!refundEntity) {
+    throw new Error("RefundEntityMissing");
+  }
+
+  const {
+    payment_id: paymentId,
+    id: refundId,
+    amount: refundAmountPaise,
+  } = refundEntity;
+
+  const order = await prisma.order.findFirst({
+    where: { razorpayPaymentId: paymentId },
+    include: { items: true },
+  });
+
+  if (!order) {
+    console.log(`Order for payment ${paymentId} not found. Skipping refund.`);
+    return null;
+  }
+
+  if (order.status === "REFUNDED") {
+    console.log(`Order ${order.id} already refunded. Skipping duplicate.`);
+    return order;
+  }
+
+  return prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      await tx.ticketType.update({
+        where: { id: item.ticketTypeId },
+        data: { quantity: { increment: item.quantity } },
+      });
+    }
+
+    await tx.eventRegistration.deleteMany({
+      where: { orderId: order.id },
+    });
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        status: "REFUNDED",
+        refundRazorpayId: refundId,
+        refundAmount: refundAmountPaise ? refundAmountPaise / 100 : null,
+        refundedAt: new Date(),
+      },
+    });
+  });
 };

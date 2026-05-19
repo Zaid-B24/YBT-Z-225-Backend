@@ -25,7 +25,26 @@ exports.handlePaymentWebhook = async (req, res) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
     const bodyToVerify = req.rawBody || req.body;
-    await BookingService.confirmBooking(bodyToVerify, signature);
+    const eventType = req.body?.event;
+
+    if (!eventType) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing event type." });
+    }
+
+    if (eventType === "payment.captured") {
+      await BookingService.confirmBooking(bodyToVerify, signature, eventType);
+    } else if (eventType === "refund.processed") {
+      await BookingService.processRefundWebhook(
+        bodyToVerify,
+        signature,
+        eventType
+      );
+    } else {
+      console.log(`Unhandled Razorpay event: ${eventType}`);
+    }
+
     res.status(200).json({ status: "ok" });
   } catch (error) {
     console.error("Webhook processing error:", error);
