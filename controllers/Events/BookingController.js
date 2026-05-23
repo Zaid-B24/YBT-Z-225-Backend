@@ -1,13 +1,16 @@
 const BookingService = require("../../services/Events/BookingService");
+const CouponService = require("../../services/Events/CouponService");
 
 exports.initiateBooking = async (req, res) => {
+  console.log("📬 req.body inside controller:", req.body);
   try {
     const userId = req.user.id;
-    const { eventId, items } = req.body;
+    const { eventId, items, couponCode } = req.body;
     const orderDetails = await BookingService.initiateBooking(
       userId,
       eventId,
-      items
+      items,
+      couponCode,
     );
     res.status(201).json({
       success: true,
@@ -18,6 +21,21 @@ exports.initiateBooking = async (req, res) => {
     console.error("Initiate booking error:", error);
     const statusCode = error.isOperational ? 400 : 500;
     res.status(statusCode).json({ success: false, message: error.message });
+  }
+};
+
+exports.validateCoupon = async (req, res) => {
+  try {
+    const { couponCode, baseAmount, eventId } = req.body;
+    const pricing = await CouponService.preValidateDiscount(
+      couponCode,
+      baseAmount,
+      eventId,
+    );
+
+    res.status(200).json({ success: true, data: pricing });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -56,7 +74,7 @@ exports.verifyBooking = async (req, res) => {
       userId,
       razorpay_order_id,
       razorpay_payment_id,
-      razorpay_signature
+      razorpay_signature,
     );
 
     res.status(200).json({

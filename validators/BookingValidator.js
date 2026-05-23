@@ -11,9 +11,10 @@ const initiateBookingSchema = z.object({
             .number()
             .int()
             .positive("Quantity must be at least 1."),
-        })
+        }),
       )
       .min(1, "You must select at least one ticket."),
+    couponCode: z.string().optional(),
   }),
 });
 

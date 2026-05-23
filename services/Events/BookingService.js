@@ -3,6 +3,8 @@ const razorpay = require("../../config/razorpay");
 const crypto = require("crypto");
 const redisService = require("../redisService");
 
+const CouponService = require("./CouponService");
+
 const _finalizeBooking = async (tx, razorpayOrderId, razorpayPaymentId) => {
   const order = await tx.order.findFirst({
     where: { razorpayOrderId: razorpayOrderId },
@@ -34,20 +36,20 @@ const _finalizeBooking = async (tx, razorpayOrderId, razorpayPaymentId) => {
           eventId: item.ticketType.eventId,
           ticketTypeId: item.ticketTypeId,
         },
-      })
-    )
+      }),
+    ),
   );
   await Promise.all(registrationPromises);
 
   const lockPromises = order.items.map((item) =>
-    redisService.releaseLock(item.ticketTypeId, item.quantity)
+    redisService.releaseLock(item.ticketTypeId, item.quantity),
   );
   await Promise.all(lockPromises);
 
   return completedOrder;
 };
 
-exports.initiateBooking = async (userId, eventId, items) => {
+exports.initiateBooking = async (userId, eventId, items, couponCode) => {
   for (const item of items) {
     const ticketType = await prisma.ticketType.findUnique({
       where: { id: item.ticketTypeId },
@@ -59,7 +61,7 @@ exports.initiateBooking = async (userId, eventId, items) => {
     const available = ticketType.quantity - lockedCount;
     if (available < item.quantity) {
       const err = new Error(
-        `Not enough tickets for '${ticketType.name}'. Only ${available} available.`
+        `Not enough tickets for '${ticketType.name}'. Only ${available} available.`,
       );
       err.isOperational = true;
       throw err;
@@ -78,8 +80,10 @@ exports.initiateBooking = async (userId, eventId, items) => {
   let pendingOrder;
   try {
     pendingOrder = await prisma.$transaction(async (tx) => {
-      let totalAmount = 0;
+      let baseAmount = 0;
+
       const orderItemsData = [];
+
       for (const item of items) {
         const ticketType = await tx.ticketType.findUnique({
           where: { id: item.ticketTypeId },
@@ -87,7 +91,7 @@ exports.initiateBooking = async (userId, eventId, items) => {
 
         if (ticketType.quantity < item.quantity) {
           throw new Error(
-            `Someone just booked the last tickets for '${ticketType.name}'.`
+            `Someone just booked the last tickets for '${ticketType.name}'.`,
           );
         }
 
@@ -96,7 +100,8 @@ exports.initiateBooking = async (userId, eventId, items) => {
           data: { quantity: { decrement: item.quantity } },
         });
 
-        totalAmount += ticketType.price * item.quantity;
+        baseAmount += ticketType.price * item.quantity;
+
         orderItemsData.push({
           ticketTypeId: item.ticketTypeId,
           quantity: item.quantity,
@@ -104,10 +109,19 @@ exports.initiateBooking = async (userId, eventId, items) => {
         });
       }
 
+      const pricing = await CouponService.applyDiscount(
+        couponCode,
+        baseAmount,
+        eventId,
+        tx,
+      );
+
       return tx.order.create({
         data: {
           userId,
-          totalAmount,
+          totalAmount: pricing.finalAmount,
+          discountAmount: pricing.discountAmount,
+          couponId: pricing.couponId,
           status: "PENDING",
           items: { create: orderItemsData },
         },
@@ -123,13 +137,14 @@ exports.initiateBooking = async (userId, eventId, items) => {
       console.warn("Post-transaction lock release failed (harmless):", e);
     }
   } catch (error) {
+    console.error("🔥 RAW TRANSACTION ERROR:", error);
     for (const item of items) {
       await redisService.releaseLock(item.ticketTypeId, item.quantity);
     }
     const finalError = new Error(
       error.isOperational
         ? error.message
-        : "Failed to confirm ticket availability."
+        : "Failed to confirm ticket availability.",
     );
     finalError.isOperational = error.isOperational || true;
     throw finalError;
@@ -202,7 +217,7 @@ exports.verifyPayment = async (
   userId,
   razorpayOrderId,
   razorpayPaymentId,
-  razorpaySignature
+  razorpaySignature,
 ) => {
   const body = razorpayOrderId + "|" + razorpayPaymentId;
 
@@ -230,7 +245,7 @@ exports.verifyPayment = async (
 
   if (order.userId !== userId) {
     const err = new Error(
-      "Authorization failed. You cannot verify this order."
+      "Authorization failed. You cannot verify this order.",
     );
     err.isOperational = true;
     throw err;

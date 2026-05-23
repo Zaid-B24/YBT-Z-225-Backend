@@ -3,12 +3,25 @@ const slugify = require("slugify");
 const { updateEventStatusSchema } = require("../../validators/EventValidator");
 const { ZodError } = require("zod");
 
+// //Move this logic and all image uplaod to a separate function
+// // --- 3. Handle File Uploads and Images ---
+// const imageUrls = [];
+// if (req.files?.images) {
+//   const images = Array.isArray(req.files.images)
+//     ? req.files.images
+//     : [req.files.images];
+//   imageUrls.push(...images.map((file) => file.path));
+// }
+// eventData.imageUrls = imageUrls;
+// eventData.primaryImage = imageUrls[0] || null;
+
 exports.createEvent = async (req, res) => {
   try {
     const validatedData = req.body;
     const creatorId = req.user.id;
 
-    const { title, categoryIds, ticketTypes, ...restOfBody } = validatedData;
+    const { title, categoryIds, ticketTypes, coupons, ...restOfBody } =
+      validatedData;
 
     const imageFiles = req.files?.images || [];
     const videoFiles = req.files?.videos || [];
@@ -45,19 +58,14 @@ exports.createEvent = async (req, res) => {
       delete eventData.ticketTypes;
     }
 
-    // //Move this logic and all image uplaod to a separate function
-    // // --- 3. Handle File Uploads and Images ---
-    // const imageUrls = [];
-    // if (req.files?.images) {
-    //   const images = Array.isArray(req.files.images)
-    //     ? req.files.images
-    //     : [req.files.images];
-    //   imageUrls.push(...images.map((file) => file.path));
-    // }
-    // eventData.imageUrls = imageUrls;
-    // eventData.primaryImage = imageUrls[0] || null;
+    if (coupons && coupons.length > 0) {
+      eventData.coupons = {
+        create: coupons,
+      };
+    }
 
     const newEvent = await EventService.createEvent(eventData);
+
     res.status(201).json({
       success: true,
       data: newEvent,

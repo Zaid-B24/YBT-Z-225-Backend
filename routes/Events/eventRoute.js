@@ -21,7 +21,7 @@ router.post(
     { name: "mobileVideos", maxCount: 5 },
   ]),
   validate(createEventSchema),
-  eventController.createEvent
+  eventController.createEvent,
 );
 
 router.get("/filters", eventController.getFilters);
@@ -30,7 +30,7 @@ router.patch(
   "/:eventId/update-status",
   protect,
   admin,
-  eventController.updateEventStatus
+  eventController.updateEventStatus,
 );
 
 router.get("/user", eventController.getPublicEvents);
@@ -40,7 +40,7 @@ router.get(
   "/totaleventscount",
   protect,
   admin,
-  eventController.getTotalEventsCount
+  eventController.getTotalEventsCount,
 );
 
 //add a search endpoint
@@ -51,6 +51,6 @@ router.delete(
   protect,
   admin,
   validate(DeleteEventSchema),
-  eventController.deleteEvent
+  eventController.deleteEvent,
 );
 module.exports = router;

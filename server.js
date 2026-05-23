@@ -52,13 +52,3 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 connectAndStart();
-
-// cron.schedule("*/4 * * * *", async () => {
-//   try {
-//     console.log("🕒 Pinging database to keep it alive...");
-//     await prisma.$queryRaw`SELECT 1`;
-//     console.log("✅ Database pinged successfully.");
-//   } catch (error) {
-//     console.error("❌ Error pinging the database:", error);
-//   }
-// });

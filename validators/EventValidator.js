@@ -27,10 +27,20 @@ const ticketTypeSchema = z
     {
       message: "Ticket sale end date must be after the start date.",
       path: ["saleEndDate"], // specify which field the error belongs to
-    }
+    },
   );
 
-// Main schema for creating an event
+const couponSchema = z.object({
+  code: z
+    .string({ required_error: "Coupon code is required." })
+    .min(1, "Coupon code cannot be empty."),
+  discountType: z.enum(["PERCENTAGE", "FLAT"]),
+  discountValue: z.coerce
+    .number()
+    .positive("Discount value must be a positive number."),
+  maxUses: z.coerce.number().int().positive().optional(),
+});
+
 const createEventSchema = z
   .object({
     body: z.object({
@@ -59,17 +69,16 @@ const createEventSchema = z
         .string()
         .optional()
         .transform((val) =>
-          val ? val.split(",").map((s) => s.trim()) : undefined
+          val ? val.split(",").map((s) => s.trim()) : undefined,
         ),
 
       youshouldKnow: z
         .string()
         .optional()
         .transform((val) =>
-          val ? val.split(",").map((s) => s.trim()) : undefined
+          val ? val.split(",").map((s) => s.trim()) : undefined,
         ),
 
-      // Handles JSON string => number[]
       categoryIds: z
         .string({ required_error: "Category IDs are required." })
         .transform((val, ctx) => {
@@ -123,6 +132,23 @@ const createEventSchema = z
           }
         })
         .pipe(z.array(ticketTypeSchema).optional()),
+
+      coupons: z
+        .string()
+        .optional()
+        .transform((val, ctx) => {
+          if (!val) return undefined;
+          try {
+            return JSON.parse(val);
+          } catch (e) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Invalid JSON format for coupons.",
+            });
+            return z.NEVER;
+          }
+        })
+        .pipe(z.array(couponSchema).optional()),
     }),
     files: z
       .object({
@@ -134,23 +160,23 @@ const createEventSchema = z
       .refine(
         (files) =>
           (files.images?.length || 0) > 0 || (files.videos?.length || 0) > 0,
-        "At least one Desktop image or video is required."
+        "At least one Desktop image or video is required.",
       )
       .refine(
         (files) => (files.images?.length || 0) <= 10,
-        "You can upload a maximum of 10 Desktop images."
+        "You can upload a maximum of 10 Desktop images.",
       )
       .refine(
         (files) => (files.mobileImages?.length || 0) <= 10,
-        "You can upload a maximum of 10 mobile images."
+        "You can upload a maximum of 10 mobile images.",
       )
       .refine(
         (files) => (files.videos?.length || 0) <= 5,
-        "You can upload a maximum of 5 Desktop videos."
+        "You can upload a maximum of 5 Desktop videos.",
       )
       .refine(
         (files) => (files.mobileVideos?.length || 0) <= 5,
-        "You can upload a maximum of 5 mobile videos."
+        "You can upload a maximum of 5 mobile videos.",
       ),
   })
   .refine((data) => data.body.endDate > data.body.startDate, {

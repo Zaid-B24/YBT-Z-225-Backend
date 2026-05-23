@@ -13,8 +13,10 @@ router.post(
   protect,
   validate(initiateBookingSchema),
   handleIdempotency,
-  BookingController.initiateBooking
+  BookingController.initiateBooking,
 );
+
+router.post("/validate-coupon", protect, BookingController.validateCoupon);
 
 router.post("/verify", protect, BookingController.verifyBooking);
 module.exports = router;

@@ -5,7 +5,7 @@ router.get("/", (req, res) => {
   res.status(200).json({
     message: "YBT API is up and running!",
   });
-});
+}); //Working
 
 const userRoutes = require("./userRoutes");
 const authRoutes = require("./authRoutes");
@@ -22,8 +22,8 @@ const workshopRoute = require("./workShopRoute");
 const homePage = require("./HomePage");
 const adminHomepage = require("./adminHomePage");
 
-router.use("/users", userRoutes);
-router.use("/auth", authRoutes);
+router.use("/users", userRoutes); //working
+router.use("/auth", authRoutes); // working
 router.use("/cars", carRoutes);
 router.use("/bikes", bikeRoutes);
 router.use("/vehicles", vehicleRoute);

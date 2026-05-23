@@ -6,6 +6,7 @@ exports.createEvent = async (eventData) => {
     include: {
       categories: true,
       ticketTypes: true,
+      coupons: true,
       creator: {
         select: {
           id: true,
@@ -124,6 +125,7 @@ exports.getAllEvents = async (options = {}) => {
       endDate: true,
       thumbnail: true,
       mobileThumbnail: true,
+      coupons: true,
 
       // --- Relations to "include" ---
       // This is how you move your 'include' logic inside 'select'
