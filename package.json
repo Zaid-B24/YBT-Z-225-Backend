@@ -30,7 +30,7 @@
     "@prisma/client": "^6.17.1",
     "autocannon": "^8.0.0",
     "bcrypt": "^6.0.0",
-    "cloudinary": "^2.10.0",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
