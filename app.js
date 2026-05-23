@@ -12,7 +12,18 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+app.use(
+  cors({
+    origin: [
+      "https://youngboyztoyz.com",
+      "https://www.youngboyztoyz.com",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+  }),
+);
+
 app.use(helmet());
 
 app.use("/api/v1", apiRouter);
